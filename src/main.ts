@@ -1,64 +1,84 @@
 import './style.css'
 import { GRAVITY } from './constants';
+import { Player } from './classes/player';
+import { Platform } from './classes/platform';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas?.getContext('2d');
 
+canvas.width = 800;
+canvas.height = 400;
+
 // Set to keep track of keys pressed
-const keys = new Set();
+const keys = new Set<string>();
 
 // Listener to update set of keys pressed
-window.addEventListener('keydown', (event) => keys.add(event));
-window.addEventListener('keyup', (event) => keys.delete(event))
+window.addEventListener('keydown', (event) => keys.add(event.code));
+window.addEventListener('keyup', (event) => keys.delete(event.code))
 
-let player = {
+const animations: Record<string, HTMLImageElement> = {
+  idle: new Image(),
+  walk: new Image(),
+  jump: new Image(),
+  attack1: new Image(),
+  attack2: new Image(),
+  attack3: new Image(),
+  running: new Image(),
+}
+
+animations.idle.src = '/Samurai/Idle.png';
+animations.walk.src = '/Samurai/Walk.png';
+animations.jump.src = '/Samurai/Jump.png';
+animations.attack1.src = '/Samurai/Attack_1.png';
+animations.attack2.src = '/Samurai/Attack_2.png';
+animations.attack3.src = '/Samurai/Attack_3.png';
+animations.running.src = '/Samurai/Run.png';
+
+let player = new Player({
   x: 50,
   y: 30,
-  width: 30,
-  height: 30,
-  frameX: 0,
+  width: 64,
+  height: 64,
   maxFrame: 5,
-  fps: 10,
-  speed: 5,
-  moving: false,
-  facingLeft: false,
-  dy: 0,
+  speed: 0.5,
   jumpForce: 12,
-  grounded: false,
-}
+});
 
-function update() {
-  player.dy += GRAVITY;
-  player.y += player.dy;
+// Create a few platforms
+const platforms = [
+  new Platform({ x: 200, y: 300, width: 200, height: 20 }),
+  new Platform({ x: 500, y: 200, width: 150, height: 20 }),
+  new Platform({ x: 100, y: 150, width: 100, height: 20 }),
+];
 
-  // Ground Collision
-  if (player.y + player.height > canvas.height) {
-    player.y = canvas.height - player.height;
-    player.dy = 0;
-    player.grounded = true;
-  }
-
-}
-
-function draw() {
-  if (ctx) {
-    ctx.fillStyle = 'red';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-  }
-}
-
-window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && player.grounded) {
-    player.dy -= player.jumpForce;
-    player.grounded = false;
-  }
-})
+let gameFrame = 0;
 
 function gameLoop() {
-  ctx?.clearRect(0, 0, canvas.width, canvas.height); // 1. Clear
-  update(); // 2. Update
-  draw(); //  3. Draw
-  requestAnimationFrame(gameLoop); // 4. Repeat
+  ctx?.clearRect(0, 0, canvas.width, canvas.height);
+
+  platforms.forEach((platform) => platform.draw(ctx));
+
+  player.update({
+    keys,
+    canvasHeight: canvas.height,
+    gravity: GRAVITY,
+    gameFrame,
+    platforms,
+  });
+
+  let imageKey: string = player.currentState;
+
+  if (player.currentState === 'attack' && player.currentAttack) {
+    imageKey = player.currentAttack.imageKey;
+  }
+
+  const currentImage = animations[imageKey] || animations.idle;
+
+  player.draw(ctx, currentImage);
+
+  gameFrame++;
+  requestAnimationFrame(gameLoop);
+
 }
 
 gameLoop();
