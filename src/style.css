@@ -37,4 +37,5 @@
   display: block;
   margin: 0px auto;
   background: var(--bg);
+  border: 1px solid blue;
 }
